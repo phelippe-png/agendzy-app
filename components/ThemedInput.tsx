@@ -1,13 +1,14 @@
-import { DimensionValue, KeyboardTypeOptions, SafeAreaView, StyleProp, StyleSheet, TextInput, TextProps, TextStyle, TouchableOpacity, View, type ViewProps } from 'react-native';
+import { DimensionValue, KeyboardTypeOptions, SafeAreaView, StyleProp, StyleSheet, TextInput, TextProps, TextStyle, TouchableOpacity, View, ViewStyle, type ViewProps } from 'react-native';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Feather, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { TextInput as TextInputPaper } from 'react-native-paper';
 import { LegacyRef } from 'react';
+import { ThemedText } from './ThemedText';
 
 export type ThemedViewProps = ViewProps & TextProps & {
   ref?: LegacyRef<any> | undefined;
   styleInput?: StyleProp<TextStyle>;
-  styleInputContainer?: StyleProp<TextStyle>;
+  styleInputContainer?: StyleProp<ViewStyle>;
   lightColor?: string;
   darkColor?: string;
   placeholder?: string;
@@ -26,6 +27,8 @@ export type ThemedViewProps = ViewProps & TextProps & {
   fontFamily?: string;
   value?: string;
   maxLength?: number;
+  errorMessage?: string;
+  bottomText?: string;
 };
 
 export function ThemedInput({
@@ -49,11 +52,14 @@ export function ThemedInput({
   fontFamily,
   value,
   maxLength,
+  errorMessage,
+  bottomText,
   inputType = 'DefaultInput',
   ...otherProps
 }: ThemedViewProps) {
   const backgroundColor = useThemeColor({ light: lightColor, dark: darkColor }, 'background');
   const color = useThemeColor({ light: 'black', dark: 'white' }, 'text');
+  const errorColor = useThemeColor({ light: '#d32f2f', dark: '#ef5350' }, 'text');
 
   return (
     <>
@@ -77,44 +83,59 @@ export function ThemedInput({
       )}
 
       {inputType == 'PaperInput' && (
-        <View style={[styleInputContainer, styles.input]}>
-          <TextInputPaper
-            ref={ref}
-            style={[{ backgroundColor }, LeftIcon && {paddingLeft: 17}, styleInput]}
-            onChange={onChange}
-            onChangeText={onChangeText}
-            value={value}
-            secureTextEntry={secureTextEntry}
-            keyboardType={keyboardType}
-            label={label}
-            placeholder={placeholder}
-            mode={mode}
-            outlineColor={outlineColor}
-            activeOutlineColor={activeOutlineColor}
-            textColor={color}
-            maxLength={maxLength}
-            theme={{
-              colors: {
-                onSurfaceVariant: color,
-              },
-              fonts: {
-                bodyLarge: {
-                  fontFamily: fontFamily,
-                }
-              },
-            }}
-          />
-          {LeftIcon && (
-            <View style={styles.leftInputIcon}>
-              <LeftIcon/>
-            </View>
-          )}
-          {RightIcon && (
-            <View style={styles.rightInputIcon}>
-              <RightIcon/>
-            </View>
-          )}
-        </View>
+        <>
+          <View style={[styleInputContainer, styles.input, (errorMessage || bottomText) && {marginBottom: 0}]}>
+            <TextInputPaper
+              ref={ref}
+              style={[{ backgroundColor }, LeftIcon && {paddingLeft: 17}, styleInput]}
+              onChange={onChange}
+              onChangeText={onChangeText}
+              value={value}
+              secureTextEntry={secureTextEntry}
+              keyboardType={keyboardType}
+              label={label}
+              placeholder={placeholder}
+              mode={mode}
+              outlineColor={errorMessage ? errorColor : outlineColor}
+              activeOutlineColor={errorMessage ? errorColor : activeOutlineColor}
+              textColor={color}
+              maxLength={maxLength}
+              theme={{
+                colors: {
+                  onSurfaceVariant: color,
+                },
+                fonts: {
+                  bodyLarge: {
+                    fontFamily: fontFamily,
+                  }
+                },
+              }}
+            />
+            {LeftIcon && (
+              <View style={styles.leftInputIcon}>
+                <LeftIcon/>
+              </View>
+            )}
+            {RightIcon && (
+              <View style={styles.rightInputIcon}>
+                <RightIcon/>
+              </View>
+            )}
+          </View>
+
+          <View style={[styleInputContainer, styles.input, {marginTop: 0, marginBottom: 0}]}>
+            {errorMessage && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 0, marginBottom: 0, marginLeft: 1 }}>
+                <Feather name="alert-circle" size={12} color={errorColor} style={{ marginRight: 4 }} />
+                <ThemedText type="default" style={{ color: errorColor, fontSize: 11, marginTop: 2 }}>
+                  {errorMessage}
+                </ThemedText>
+              </View>
+            )}
+
+            {bottomText && <ThemedText type='default' style={styles.bottomText}>{bottomText}</ThemedText>}
+          </View>
+        </>
       )}
     </>
   )
@@ -142,4 +163,10 @@ const styles = StyleSheet.create({
     // paddingRight: 13,
     paddingTop: 7
   },
+
+  bottomText: {
+    fontSize: 11,
+    marginLeft: 1
+    // marginLeft: 15
+  }
 });

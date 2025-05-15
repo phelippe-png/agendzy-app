@@ -5,65 +5,113 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { Feather, FontAwesome, FontAwesome5, FontAwesome6, Ionicons, MaterialIcons } from "@expo/vector-icons";
-import { useRef, useState } from "react";
-import { Image, StyleSheet, TextInput, TouchableOpacity, useColorScheme, View } from "react-native";
+import { useRef, useState, useMemo } from "react";
+import { Image, StyleSheet, TouchableOpacity, useColorScheme, View } from "react-native";
 import ProgressBar from 'react-native-progress/Bar';
+import { ThemedRadioGroup } from '@/components/ThemedRadioGroup';
+import { Double } from 'react-native/Libraries/Types/CodegenTypes';
 
 export default function Register() {
   enum Screen {
     Email = 'Qual é o seu e-mail?',
-    Senha = 'Qual será a sua senha?',
-    Telefone = 'Qual o número do seu telefone?'
+    Password = 'Qual será a sua senha?',
+    Phone = 'Qual o número do seu telefone?',
+    CompleteName = 'Qual o seu nome completo?',
+    BarberName = 'Qual o nome da sua barbearia?',
+    TeamSize = 'Qual o tamanho da sua equipe?',
   }
 
   const color = useThemeColor({light: 'black', dark: 'white'}, 'text')
+
   const passwordValidationTextColor = useThemeColor({light: 'gray', dark: 'rgb(105, 103, 103)'}, 'text')
   const [progressBarWidth, setProgressBarWidth] = useState(0)
-  const [visiblePassword, setVisiblePassword] = useState(false)
-  const inputPhoneRef = useRef<TextInput>(null)
-  const valuePhoneRef = useRef('')
+  const [visiblePassword, setVisiblePassword] = useState(true)
   const [passwordValidationStatus, setPasswordValidationStatus] = useState({letter: false, number: false, character: false})
   const screenIndex = useRef(0)
-  const progressProgressBar = useRef( (100/Object.values(Screen).length) / 100 )
   const [currentScreen, setCurrentScreen] = useState(Object.values(Screen).find((e, i) => i == screenIndex.current))
+  const [forceUpdate, setForceUpdate] = useState(false)
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [phone, setPhone] = useState('')
+  const [completeName, setCompleteName] = useState('')
+  const [barber, setBarber] = useState('')
+  const [teamSize, setTeamSize] = useState('')
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
-  const dividirEmPartes = (valorTotal: number, divisor: number) => {
-    const partes = [];
-    const quociente = Math.floor(valorTotal / divisor);
-    const resto = valorTotal % divisor;
-  
-    for (let i = 0; i < divisor; i++)
-      partes.push(quociente);
-  
-    if (resto > 0)
-      partes[partes.length - 1] += resto;
-  
-    return partes;
+  const calculateProgressBar = (current: Double, total: Double) => {
+    const progress = useMemo(() => {
+      if (!total || total <= 0) return 0;
+
+      const rawProgress = current / total;
+      const clampedProgress = Math.min(Math.max(rawProgress, 0), 1);
+
+      return clampedProgress;
+    }, [current, total]);
+
+    return progress;
+  }
+  const progressBar = calculateProgressBar(screenIndex.current, Object.values(Screen).length-1)
+
+  const validateEmail = () => {
+    const regexValidateEmail = (email: string) => {
+      const emailRegex = /^[^\s@]+@[^\s@]+.[^\s@]+$/;
+      return emailRegex.test(email);
+    }
+
+    if (currentScreen === Screen.Email) {
+      if (!email.trim()) {
+        setEmailError('Preencha seu e-mail para continuar');
+        return false;
+      }
+
+      if (!regexValidateEmail(email)) {
+        setEmailError('Digite um e-mail válido para continuar');
+        return false;
+      }
+
+      setEmailError('');
+      return true
+    }
   }
 
-  const calculateProgressBar = (screenIndex: number) => {
-    var stateValuesProgressBar = dividirEmPartes(100, Object.values(Screen).length)
-    stateValuesProgressBar = stateValuesProgressBar.map((e) => e/100)
+  const validatePassword = () => {
+    if (currentScreen === Screen.Password) {
+      if (!password.trim()) {
+        setPasswordError('Preencha sua senha para continuar');
+        return false;
+      }
 
-    progressProgressBar.current = stateValuesProgressBar.filter((e, i) => i <= screenIndex).reduce((t, n) => t + n, 0)
-    return progressProgressBar.current
+      const isValid = passwordValidationStatus.letter && passwordValidationStatus.number && passwordValidationStatus.character;
+      if (!isValid) {
+        setPasswordError('A senha precisa atender aos critérios mínimos abaixo');
+        return false;
+      }
+
+      setPasswordError('')
+      return true
+    }
   }
 
   const nextScreen = () => {
+    if (currentScreen == Screen.Email && !validateEmail())
+      return
+
+    if (currentScreen == Screen.Password && !validatePassword())
+      return
+    
     if (screenIndex.current == Object.values(Screen).length-1)
-      return null
+      return
 
     screenIndex.current += 1;
-    calculateProgressBar(screenIndex.current)
     setCurrentScreen(Object.values(Screen).find((e, i) => i == screenIndex.current))
   }
 
   const previousScreen = () => {
     if (screenIndex.current == 0)
-      return null
+      return
 
     screenIndex.current -= 1;
-    calculateProgressBar(screenIndex.current)
     setCurrentScreen(Object.values(Screen).find((e, i) => i == screenIndex.current))
   }
   
@@ -71,45 +119,57 @@ export default function Register() {
     setVisiblePassword(!visiblePassword)
   }
 
-  const onChangePassword = (e) => {
+  const onChangePassword = (text: string) => {
     const containsLetter = (str: string) => /[a-zA-Z]/.test(str)
     const containsNumber = (str: string) => /\d/.test(str)
 
     setPasswordValidationStatus({
-      letter: containsLetter(e.nativeEvent.text),
-      number: containsNumber(e.nativeEvent.text),
-      character: String(e.nativeEvent.text).length >= 8
+      letter: containsLetter(text),
+      number: containsNumber(text),
+      character: String(text).length >= 8
     })
+
+    setPassword(text)
+    if (passwordError != '') {
+      setPasswordError('')
+    }
   }
 
-  const onChangeInputPhone = (text) => {
-    const onlyNumbers = text.replace(/[^0-9]/g, '');
+  const onChangeInputPhone = (text: string) => {
+    const onlyNumbers = applyPhoneMask(text)
+    setPhone(onlyNumbers)
+  };
 
-    // Atualiza se houver mudança
-    if (onlyNumbers !== valuePhoneRef.current) {
-      valuePhoneRef.current = onlyNumbers;
+  const applyPhoneMask = (text: string) => {
+    const cleaned = text.replace(/\D/g, '');
 
-      // Atualiza visualmente
-      if (inputPhoneRef.current) {
-        inputPhoneRef.current.setNativeProps({ text: onlyNumbers });
-      }
+    if (cleaned.length <= 2) {
+      return cleaned;
+    } else if (cleaned.length <= 6) {
+      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
+    } else if (cleaned.length <= 7) {
+      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}`;
+    } else {
+      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`;
     }
   };
 
   return (
     <ThemedView lightColor="#f4f4f4" style={styles.container}>
       <View style={styles.panelModalHeaderContainer} onLayout={(e) => { setProgressBarWidth(e.nativeEvent.layout.width) }}>
-        <View style={styles.backButtonContainer}>
-          <TouchableOpacity style={styles.backButton} onPress={previousScreen}>
-            <MaterialIcons name='arrow-back' color={color} size={25}/>
-          </TouchableOpacity>
-        </View>
+        {currentScreen != Screen.Email && (
+          <View style={styles.backButtonContainer}>
+            <TouchableOpacity style={styles.backButton} onPress={previousScreen}>
+              <MaterialIcons name='arrow-back' color={color} size={25}/>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <ProgressBar 
           borderColor={'#c4a853'}
           color={'#c4a853'}
           borderRadius={3}
-          progress={progressProgressBar.current}
+          progress={progressBar}
           useNativeDriver
           width={progressBarWidth / 2}
           style={{marginVertical: 30}}
@@ -129,30 +189,35 @@ export default function Register() {
         <ThemedText type="subtitle" style={styles.titleHeader}>{currentScreen}</ThemedText>
 
         {currentScreen == Screen.Email && (
-          <>
-            <ThemedInput
-              inputType='PaperInput'
-              mode='outlined'
-              styleInputContainer={[styles.inputContainer, {marginBottom: 0}]}
-              styleInput={styles.input}
-              fontFamily='GilroyMedium'
-              label='E-mail'
-              lightColor="white"
-              darkColor="#222223"
-              outlineColor={color}
-              activeOutlineColor={color}
-            />
-
-            <ThemedText type='default' style={{fontSize: 11, marginLeft: 15}}>Iremos enviar um e-mail de confirmação para a ativação da conta.</ThemedText>
-          </>
+          <ThemedInput
+            inputType='PaperInput'
+            mode='outlined'
+            styleInputContainer={[styles.inputContainer]}
+            styleInput={styles.input}
+            fontFamily='GilroyMedium'
+            label='E-mail'
+            lightColor="white"
+            darkColor="#222223"
+            outlineColor={color}
+            activeOutlineColor={color}
+            value={email}
+            errorMessage={emailError}
+            bottomText='Iremos enviar um e-mail de confirmação para a ativação da conta.'
+            onChangeText={(text) => {
+              setEmail(text);
+              if (emailError) {
+                setEmailError('');
+              }
+            }}
+          />
         )}
 
-        {currentScreen == Screen.Senha && (
+        {currentScreen == Screen.Password && (
           <>
             <ThemedInput
               inputType='PaperInput'
               mode='outlined'
-              styleInputContainer={[styles.inputContainer, {marginBottom: 7}]}
+              styleInputContainer={[styles.inputContainer]}
               styleInput={styles.input}
               fontFamily='GilroyMedium'
               label='Senha'
@@ -161,7 +226,9 @@ export default function Register() {
               outlineColor={color}
               activeOutlineColor={color}
               secureTextEntry={visiblePassword}
-              onChange={onChangePassword}
+              onChangeText={onChangePassword}
+              value={password}
+              errorMessage={passwordError}
               RightIcon={() => (
                 <TouchableOpacity style={{padding: 12, paddingRight: 17}} onPress={viewPassword}>
                   <Ionicons name={visiblePassword ? 'eye' : 'eye-off'} color={color} size={18}/>
@@ -186,45 +253,84 @@ export default function Register() {
           </>
         )}
 
-        {currentScreen == Screen.Telefone && (
-          <>
-            {/* <TextInput 
-              style={{width: 300, height: 100}} 
-              ref={inputPhoneRef}
-              keyboardType="numeric"
-              onChangeText={onChangeInputPhone}
-            >
+        {currentScreen == Screen.Phone && (
+          <ThemedInput
+            value={phone}
+            inputType='PaperInput'
+            mode='outlined'
+            onChangeText={onChangeInputPhone}
+            styleInputContainer={[styles.inputContainer, {marginBottom: 0}]}
+            styleInput={styles.input}
+            fontFamily='GilroyMedium'
+            label='Celular'
+            placeholder='(00) 0 0000-0000'
+            keyboardType='numeric'
+            lightColor="white"
+            darkColor="#222223"
+            outlineColor={color}
+            activeOutlineColor={color}
+            maxLength={15}
+            bottomText='Este será o número de celular associado à sua conta.'
+          />
+        )}
 
-            </TextInput> */}
+        {currentScreen == Screen.CompleteName && (
+          <ThemedInput
+            value={completeName}
+            onChangeText={setCompleteName}
+            inputType='PaperInput'
+            mode='outlined'
+            styleInputContainer={[styles.inputContainer, {marginBottom: 0}]}
+            styleInput={styles.input}
+            fontFamily='GilroyMedium'
+            label='Nome completo'
+            lightColor="white"
+            darkColor="#222223"
+            outlineColor={color}
+            activeOutlineColor={color}
+            bottomText='Este será o nome associado à sua conta.'
+          />
+        )}
 
-            <ThemedInput
-              // ref={phoneText}
-              inputType='PaperInput'
-              mode='outlined'
-              onChangeText={onChangeInputPhone}
-              styleInputContainer={styles.inputContainer}
-              styleInput={styles.input}
-              fontFamily='GilroyMedium'
-              label='Celular'
-              placeholder='(00) 0 0000-0000'
-              keyboardType='numeric'
-              lightColor="white"
-              darkColor="#222223"
-              outlineColor={color}
-              activeOutlineColor={color}
-            />
-          </>
+        {currentScreen == Screen.BarberName && (
+          <ThemedInput
+            value={barber}
+            onChangeText={setBarber}
+            inputType='PaperInput'
+            mode='outlined'
+            styleInputContainer={[styles.inputContainer, {marginBottom: 0}]}
+            styleInput={styles.input}
+            fontFamily='GilroyMedium'
+            label='Nome da barbearia'
+            lightColor="white"
+            darkColor="#222223"
+            outlineColor={color}
+            activeOutlineColor={color}
+            bottomText='Este será o nome exibido para seus clientes nos agendamentos.'
+          />
+        )}
+
+        {currentScreen == Screen.TeamSize && (
+          <ThemedRadioGroup
+            selectedValue={teamSize}
+            onSelect={setTeamSize}
+            options={[
+              { label: '1 a 2 pessoas', value: 'ONE_TO_TWO' },
+              { label: '3 a 5 pessoas', value: 'THREE_TO_FIVE' },
+              { label: '6 a 10 pessoas', value: 'SIX_TO_TEN' },
+              { label: '11 ou mais pessoas', value: 'ELEVEN_OR_MORE' }
+            ]}
+          />
         )}
       </View>
 
       <View style={styles.continueButtonContainer}>
         <ThemedButton 
           lightColor='#c4a854' darkColor='#c4a854'
-          disabled={(currentScreen == Screen.Senha && (!passwordValidationStatus.character || !passwordValidationStatus.letter || !passwordValidationStatus.number))} 
           style={styles.continueButton} 
           onPress={nextScreen}
         >
-          <ThemedText style={styles.continueButtonText}>CONTINUAR</ThemedText>
+          <ThemedText style={styles.continueButtonText}>{screenIndex.current < Object.values(Screen).length-1 ? 'CONTINUAR' : 'FINALIZAR'}</ThemedText>
         </ThemedButton>
       </View>
     </ThemedView>

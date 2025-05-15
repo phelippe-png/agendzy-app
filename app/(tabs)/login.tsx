@@ -20,22 +20,32 @@ export default function Login() {
         <ThemedText style={{fontSize: 13}}>A gestão da sua barbearia na palma da mão</ThemedText>
       </View>
 
-      <View style={{flex: 1, width: '100%', alignItems: 'center'}}>
-        <ThemedInput 
+      <View style={{flex: 1.2, width: '100%', alignItems: 'center'}}>
+        <ThemedInput
+          inputType='PaperInput'
+          mode='outlined'
           styleInputContainer={{width: '75%', margin: 7}}
           styleInput={styles.input}
-          placeholder='E-mail' 
+          fontFamily='Gilroy'
+          label='E-mail'
           lightColor="white"
-          darkColor="#222223" 
+          darkColor="#222223"
+          outlineColor={color}
+          activeOutlineColor={color}
           LeftIcon={() => <MaterialIcons name='email' color={color}/>}
         />
 
-        <ThemedInput 
+        <ThemedInput
+          inputType='PaperInput'
+          mode='outlined'
           styleInputContainer={{width: '75%', margin: 7}}
           styleInput={styles.input}
-          placeholder='Senha'
+          fontFamily='Gilroy'
+          label='Senha'
           lightColor="white"
           darkColor="#222223"
+          outlineColor={color}
+          activeOutlineColor={color}
           secureTextEntry
           LeftIcon={() => <FontAwesome name='lock' color={color} style={{paddingLeft: 2}}/>}
         />
@@ -46,7 +56,7 @@ export default function Login() {
           </ThemedButton>
         </View>
 
-        <ThemedButton style={styles.loginButton}>
+        <ThemedButton style={[styles.loginButton, {marginBottom: 7}]}>
           <ThemedText darkColor='black' lightColor='white' style={{fontFamily: 'GilroyBold', fontSize: 15}}>Entrar</ThemedText>
         </ThemedButton>
 
@@ -79,10 +89,6 @@ const styles = StyleSheet.create({
   input: {
     height: 43,
     borderRadius: 7,
-    fontFamily: 'GilroyMedium',
-    paddingLeft: 30,
-    paddingRight: 10,
-    elevation: 5
   },
 
   loginButton: {
